@@ -7,7 +7,7 @@ blueprint:
   domain: automation
   input:
     remote:
-      name: IKEA TRADFRI remote control 4 buttons (Temperature)
+      name: IKEA Remote (Temperature)
       description: Select the remote control you wish to use.
       selector:
         device:
@@ -50,12 +50,12 @@ blueprint:
       description: The speed in which to update the light when the button is held.
       selector:
         number:
-          min: 0.1
-          max: 2.0
-          step: 0.1
-          unit_of_measurement: seconds
+          min: 0.0
+          max: 1000.0
+          step: 50.0
+          unit_of_measurement: milliseconds
           mode: slider
-      default: 0.5
+      default: 100
 
     # define what temperature steps it should take (250 .. 454.13 Mired)
     # Kelvin range: 2202..4000 K (1798 K)
@@ -155,8 +155,9 @@ action:
                     entity_id: !input light
                   data:
                     brightness_step_pct: 10
-                    transition: "{{ (var_speed )|float }}" #"{{ (var_speed / 1000)|float }}"
-                - delay: !input speed
+                    transition: "{{ (var_speed / 1000)|float }}"
+                - delay:
+                    milliseconds: !input speed
 
       - conditions:
           - "{{ command == 'move' }}" # move from level Control
@@ -171,8 +172,9 @@ action:
                     entity_id: !input light
                   data:
                     brightness_step_pct: -10
-                    transition: "{{ (var_speed )|float }}" #"{{ (var_speed / 1000)|float }}"
-                - delay: !input speed
+                    transition: "{{ (var_speed / 1000)|float }}"
+                - delay:
+                    milliseconds: !input speed
 
       #### Scene: Define all scene buttons ####
       # right button press
@@ -219,7 +221,8 @@ action:
                       \ {{ 500 }}\n{% else %}\n  {{ state_attr(var_light, \"color_temp\")
                       + var_temp_step }}\n{% endif %}"
                     transition: "{{ (var_speed / 1000)|float }}"
-                - delay: !input speed
+                - delay:
+                    milliseconds: !input speed
 
       # left button press
       - conditions:
@@ -265,5 +268,6 @@ action:
                       \ {{ 153 }}\n{% else %}\n  {{ state_attr(var_light, \"color_temp\")
                       - var_temp_step }}\n{% endif %}"
                     transition: "{{ (var_speed / 1000)|float }}"
-                - delay: !input speed
+                - delay:
+                    milliseconds: !input speed
     default: []
