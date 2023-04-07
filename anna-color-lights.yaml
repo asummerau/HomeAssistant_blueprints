@@ -92,6 +92,7 @@ variables:
   force_brightness: !input force_brightness
   var_color_step_hue: !input color_step_hue
   var_color_step_sat: !input color_step_sat
+
 trigger:
   - platform: event
     event_type: zha_event
@@ -171,7 +172,7 @@ action:
                     brightness_step_pct: 10
                     transition: "{{ (var_speed / 1000)|float }}"
                 - delay:
-                    milliseconds: !input "speed"
+                    milliseconds: !input speed
 
       - conditions:
           - "{{ command == 'move' }}" # move from level Control
@@ -188,7 +189,7 @@ action:
                     brightness_step_pct: -10
                     transition: "{{ (var_speed / 1000)|float }}"
                 - delay:
-                    milliseconds: !input "speed"
+                    milliseconds: !input speed
 
       # STEP (increase/decrese brightness in a single step)
       - conditions:
@@ -250,7 +251,7 @@ action:
                       - '{{ state_attr(var_light, "hs_color")[1] }}'
                     transition: "{{ (var_speed / 1000)|float }}"
                 - delay:
-                    milliseconds: !input "speed"
+                    milliseconds: !input speed
 
       - conditions:
           - "{{ command == 'press' }}"
@@ -286,5 +287,5 @@ action:
                       - '{{(state_attr(var_light, "hs_color")[1] + var_color_step_sat) % 100}}'
                     transition: "{{ (var_speed / 1000)|float }}"
                 - delay:
-                    milliseconds: !input "speed"
+                    milliseconds: !input speed
     default: []
