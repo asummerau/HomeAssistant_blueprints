@@ -1,0 +1,290 @@
+blueprint:
+  name: ZHA - IKEA TRADFRI - 4 Button Remote - Color Lights
+  description:
+    This automation simulates the use of the IKEA TRADFRI remote control
+    connected through ZHA. Button Up and Button Down = Turn On and Turn Off. Holdin Button Up or holding Button Down = Increase or decrease of brightness. Button Right Press changes the color hue, Button Left changes the color saturation.
+  domain: automation
+  input:
+    remote:
+      name: IKEA TRADFRI remote control 4 buttons (Colors)
+      description: Select the remote control you wish to use.
+      selector:
+        device:
+          integration: zha
+          manufacturer: IKEA of Sweden
+          model: Remote Control N2
+          multiple: false
+
+    light:
+      name: Light
+      description: Select the light entity you wish to control.
+      selector:
+        entity:
+          domain: light
+          multiple: false
+
+    force_brightness:
+      name: Force turn on brightness
+      description:
+        Force the brightness to the set level below, when the "on" button
+        on the remote is pushed and lights turn on.
+      default: false
+      selector:
+        boolean: {}
+
+    brightness:
+      name: Brightness
+      description: Brightness of the light(s) when turning on
+      default: 100
+      selector:
+        number:
+          min: 0.0
+          max: 100.0
+          mode: slider
+          step: 1.0
+          unit_of_measurement: "%"
+
+    speed:
+      name: Speed
+      description: The speed in which to update the light when the button is held.
+      selector:
+        number:
+          min: 0.0
+          max: 1000.0
+          step: 50.0
+          unit_of_measurement: milliseconds
+          mode: slider
+      default: 100
+
+    # define what color steps it should take
+    color_step_hue:
+      name: Color Step Hue
+      description: The color step change for the hue value
+      selector:
+        number:
+          min: 1.0
+          max: 360.0
+          step: 1.0
+          unit_of_measurement: hue
+          mode: slider
+      default: 10
+
+    # define what color saturation steps it should take
+    color_step_sat:
+      name: Color Step Saturation
+      description: The color step change for the saturation value
+      selector:
+        number:
+          min: 1.0
+          max: 100.0
+          step: 1.0
+          unit_of_measurement: saturation
+          mode: slider
+      default: 5
+
+  source_url: https://gist.github.com/cehberlin/be7b5d34aecb71aea0dd9514651e802d
+
+mode: restart
+max_exceeded: silent
+variables:
+  var_light: !input light
+  var_speed: !input speed
+  force_brightness: !input force_brightness
+  var_color_step_hue: !input color_step_hue
+  var_color_step_sat: !input color_step_sat
+trigger:
+  - platform: event
+    event_type: zha_event
+    event_data:
+      device_id: !input remote
+
+action:
+  - variables:
+      command: "{{ trigger.event.data.command }}"
+      cluster_id: "{{ trigger.event.data.cluster_id }}"
+      endpoint_id: "{{ trigger.event.data.endpoint_id }}"
+      args: "{{ trigger.event.data.args }}"
+
+  - choose:
+      #### ON/OFF buttons ####
+      # Turn light on
+      - conditions:
+          - "{{ command == 'on' }}"
+          - "{{ cluster_id == 6 }}" # zigbee cluster id for ON/OFF
+          - "{{ endpoint_id == 1 }}"
+        sequence:
+          - choose:
+              - conditions: "{{ force_brightness }}"
+                sequence:
+                  - service: light.turn_on
+                    target:
+                      entity_id: !input light
+                    data:
+                      brightness_pct: !input brightness
+                      hs_color:
+                        - 38.222
+                        - 52.941
+            default: # runs if force brightness is not set
+              - service: light.turn_on
+                target:
+                  entity_id: !input light
+
+      # Turn light off
+      - conditions:
+          - "{{ command == 'off' }}"
+          - "{{ cluster_id == 6 }}" # zigbee cluster id for ON/OFF
+          - "{{ endpoint_id == 1 }}"
+        sequence:
+          - service: light.turn_off
+            target:
+              entity_id: !input light
+
+      #### Level Control: Define all brighness buttons ####
+      # MOVE TO LEVEL
+      - conditions:
+          - "{{ command == 'move_to_level_with_on_off' }}" # from Level Control
+          - "{{ cluster_id == 8 }}" # zigbee cluster id for
+          - "{{ endpoint_id == 1 }}"
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input light
+            data:
+              brightness: 254
+              hs_color:
+                - 38.222
+                - 52.941
+
+      # MOVE (increase/decrese brightness at a specified rate)
+      - conditions:
+          - "{{ command == 'move_with_on_off' }}" # move with on off from level control
+          - "{{ cluster_id == 8 }}" # zigbee cluster id for Level Control
+          - "{{ endpoint_id == 1 }}"
+        sequence:
+          - repeat:
+              while: []
+              sequence:
+                - service: light.turn_on
+                  target:
+                    entity_id: !input light
+                  data:
+                    brightness_step_pct: 10
+                    transition: "{{ (var_speed / 1000)|float }}"
+                - delay:
+                    milliseconds: !input "speed"
+
+      - conditions:
+          - "{{ command == 'move' }}" # move from level Control
+          - "{{ cluster_id == 8 }}" # zigbee cluster id for Level Control
+          - "{{ endpoint_id == 1 }}"
+        sequence:
+          - repeat:
+              while: []
+              sequence:
+                - service: light.turn_on
+                  target:
+                    entity_id: !input light
+                  data:
+                    brightness_step_pct: -10
+                    transition: "{{ (var_speed / 1000)|float }}"
+                - delay:
+                    milliseconds: !input "speed"
+
+      # STEP (increase/decrese brightness in a single step)
+      - conditions:
+          - "{{ command == 'step_with_on_off' }}" # from Level Control
+          - "{{ cluster_id == 8 }}" # zigbee cluster id for
+          - "{{ endpoint_id == 1 }}"
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input light
+            data:
+              brightness_step_pct: 20
+              transition: "{{ (var_speed / 1000)|float }}"
+
+      - conditions:
+          - "{{ command == 'step' }}" # step from level Control
+          - "{{ cluster_id == 8 }}" # zigbee cluster id for Level Control
+          - "{{ endpoint_id == 1 }}"
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input light
+            data:
+              brightness_step_pct: -20
+              transition: "{{ (var_speed / 1000)|float }}"
+
+      # right button press
+      - conditions:
+          - "{{ command == 'press' }}"
+          - "{{ cluster_id == 5 }}" # Scene cluster
+          - "{{ endpoint_id == 1 }}"
+          - "{{ args == [256, 13, 0] }}"
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input light
+            data:
+              hs_color:
+                - '{{(state_attr(var_light, "hs_color")[0] + var_color_step_hue) % 360}}'
+                - '{{ state_attr(var_light, "hs_color")[1] }}'
+              transition: "{{ (var_speed / 1000)|float }}"
+
+      # very long press on right button
+      - conditions:
+          - "{{ command == 'hold' }}"
+          - "{{ cluster_id == 5 }}" # Scene cluster
+          - "{{ endpoint_id == 1 }}"
+          - "{{ args == [3328, 0] }}"
+        sequence:
+          - repeat:
+              while: []
+              sequence:
+                - service: light.turn_on
+                  target:
+                    entity_id: !input light
+                  data:
+                    hs_color:
+                      - '{{(state_attr(var_light, "hs_color")[0] + var_color_step_hue) % 360}}'
+                      - '{{ state_attr(var_light, "hs_color")[1] }}'
+                    transition: "{{ (var_speed / 1000)|float }}"
+                - delay:
+                    milliseconds: !input "speed"
+
+      - conditions:
+          - "{{ command == 'press' }}"
+          - "{{ cluster_id == 5 }}"
+          - "{{ endpoint_id == 1 }}"
+          - "{{ args == [257, 13, 0] }}"
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input light
+            data:
+              hs_color:
+                - '{{ state_attr(var_light, "hs_color")[0] }}'
+                - '{{(state_attr(var_light, "hs_color")[1] + var_color_step_sat) % 100}}'
+              transition: "{{ (var_speed / 1000)|float }}"
+
+      # very long press on left button
+      - conditions:
+          - "{{ command == 'hold' }}"
+          - "{{ cluster_id == 5 }}"
+          - "{{ endpoint_id == 1 }}"
+          - "{{ args == [3329, 0] }}"
+        sequence:
+          - repeat:
+              while: []
+              sequence:
+                - service: light.turn_on
+                  target:
+                    entity_id: !input light
+                  data:
+                    hs_color:
+                      - '{{ state_attr(var_light, "hs_color")[0] }}'
+                      - '{{(state_attr(var_light, "hs_color")[1] + var_color_step_sat) % 100}}'
+                    transition: "{{ (var_speed / 1000)|float }}"
+                - delay:
+                    milliseconds: !input "speed"
+    default: []
