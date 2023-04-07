@@ -31,7 +31,7 @@ blueprint:
   input:
     remote:
       name: Remote
-      description: IKEA remote to use
+      description: Select the remote control you wish to use.
       selector:
         device:
           integration: zha # ZHA = Zigbee Home Automation
