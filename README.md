@@ -4,7 +4,7 @@ This repository contains Home Assistant blueprints for controlling lights using 
 
 ## Blueprints
 
-### 1. anna-on-off-and-dim.yaml
+### 1. a-on-off-and-dim.yaml
 
 **Purpose:** Basic light control with on/off and dimming functionality
 
@@ -26,7 +26,7 @@ This repository contains Home Assistant blueprints for controlling lights using 
 
 ---
 
-### 2. anna-color-lights.yaml
+### 2. a-color-lights.yaml
 
 **Purpose:** Advanced color light control with hue and saturation adjustment
 
@@ -50,7 +50,7 @@ This repository contains Home Assistant blueprints for controlling lights using 
 
 ---
 
-### 3. anna_temperature.yaml
+### 3. a-temperature.yaml
 
 **Purpose:** Color temperature control for white spectrum lights
 
