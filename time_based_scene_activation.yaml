@@ -1,0 +1,62 @@
+blueprint:
+  name: Time-Based Scene Activation
+  description: Automatically activate different scenes at specified times throughout the day
+  domain: automation
+  input:
+    daytime_scene:
+      name: Daytime Scene
+      description: Scene to activate during daytime hours
+      selector:
+        entity:
+          domain: scene
+          multiple: false
+    
+    daytime_time:
+      name: Daytime Start Time
+      description: Time to activate the daytime scene
+      default: "06:00:00"
+      selector:
+        time: {}
+    
+    evening_scene:
+      name: Evening Scene
+      description: Scene to activate during evening hours
+      selector:
+        entity:
+          domain: scene
+          multiple: false
+    
+    evening_time:
+      name: Evening Start Time
+      description: Time to activate the evening scene
+      default: "19:00:00"
+      selector:
+        time: {}
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: time
+    at: !input daytime_time
+    id: "daytime"
+  - platform: time
+    at: !input evening_time
+    id: "evening"
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: "daytime"
+        sequence:
+          - service: scene.turn_on
+            target:
+              entity_id: !input daytime_scene
+      - conditions:
+          - condition: trigger
+            id: "evening"
+        sequence:
+          - service: scene.turn_on
+            target:
+              entity_id: !input evening_scene
