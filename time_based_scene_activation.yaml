@@ -50,13 +50,13 @@ action:
           - condition: trigger
             id: "daytime"
         sequence:
-          - service: scene.turn_on
+          - service: scene.apply
             target:
               entity_id: !input daytime_scene
       - conditions:
           - condition: trigger
             id: "evening"
         sequence:
-          - service: scene.turn_on
+          - service: scene.apply
             target:
               entity_id: !input evening_scene
